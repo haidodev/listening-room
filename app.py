@@ -289,8 +289,11 @@ class Handler(BaseHTTPRequestHandler):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    parser.add_argument('--host', default='0.0.0.0', help='Bind address (default: all network interfaces)')
     parser.add_argument('--port', type=int, default=8000)
     args = parser.parse_args()
     sync_audio()
-    print(f'Listening library: http://localhost:{args.port}/listening', flush=True)
-    ThreadingHTTPServer(('127.0.0.1', args.port), Handler).serve_forever()
+    server = ThreadingHTTPServer((args.host, args.port), Handler)
+    print(f'Listening on {args.host}:{server.server_port}', flush=True)
+    print(f'Local URL: http://localhost:{server.server_port}/listening', flush=True)
+    server.serve_forever()

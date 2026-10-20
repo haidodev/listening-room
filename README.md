@@ -7,6 +7,8 @@ python3 app.py     # Run on http://localhost:8000
 uv run dev.py     # Development with automatic restarts
 ```
 
+The server accepts external connections on all interfaces by default. Other devices can open `http://<your-computer-ip>:8000/listening`. Use `--host 127.0.0.1` for local-only access or `--port 8080` to change the port (also supported by `uv run dev.py`).
+
 - `/listening`: listen once, or replay and seek freely when the teacher enables full access. Space toggles playback; arrow keys skip 5 seconds with full access.
 - `/teacher`: upload, rename, show/hide, configure access, and delete audio. Password: `HAIDOHONG` (override with `TEACHER_PASSWORD`).
 
