@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Listening room</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f5f4ef;color:#23392e;font:16px system-ui,sans-serif}main{max-width:800px;margin:70px auto;padding:24px}small{letter-spacing:.14em;text-transform:uppercase;color:#62756a}h1{font-size:clamp(36px,7vw,56px);letter-spacing:-.05em;margin:12px 0}p{color:#65736b;line-height:1.6}.card{background:white;border:1px solid #dde3dc;border-radius:16px;padding:22px;margin:14px 0;display:flex;gap:20px;align-items:center;flex-wrap:wrap}.info{flex:1;min-width:180px}h2{font-size:18px;margin:0 0 8px}.status{font-size:14px;color:#65736b}button{border:0;border-radius:8px;padding:12px 18px;background:#264f3c;color:white;font:inherit;cursor:pointer}button:disabled{background:#e6ebe7;color:#7b867e;cursor:default}button:focus-visible{outline:3px solid #b38b44;outline-offset:3px}.stop{background:#ecf0eb;color:#264f3c}progress{display:block;width:100%;height:6px;margin-top:14px;accent-color:#264f3c}#notice{color:#94502d}footer{margin-top:32px;font-size:13px;color:#65736b}
+.seek{width:100%;margin:14px 0;accent-color:#264f3c}.seek[hidden],progress[hidden],button[hidden]{display:none}.player-controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.player-controls .back,.player-controls .forward{display:inline-flex;align-items:center;justify-content:center;width:46px;height:46px;padding:10px}.player-controls button[hidden]{display:none}
+.player-controls .play{width:120px;height:46px;padding:10px;flex:0 0 120px}
+</style>
+<main>
+<small>Take a moment. Tune in.</small>
+<h1>Listening room</h1>
+<p>Choose an audio to begin. Your teacher decides whether an audio allows unlimited replay and seeking.</p>
+<section class="card" aria-labelledby="sound-heading">
+<div class="info">
+<h2 id="sound-heading">Check your sound first</h2>
+<p>Play a short test tone before starting a lesson. You can repeat this test anytime.</p>
+<div id="sound-status" class="status" role="status" aria-live="polite">Play the sample to check your sound before starting.</div>
+</div>
+<button id="test-sound" type="button">Test sound</button>
+</section>
+<p id="notice" role="status" aria-live="polite"></p>
+<div id="library" aria-label="Audio library">Loading audio…</div>
+<p class="status">Keyboard: Space to play or stop. ← / → to skip 5 seconds when full access is enabled. Focus a player to choose which audio to control.</p>
+<footer>Stop pauses your listening so you can continue later. Listening progress is saved in this browser.</footer>
+</main>
+<script src="/app.js" defer></script>
+</html>

@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Teacher · Listening room</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f5f4ef;color:#23392e;font:16px system-ui,sans-serif}main{max-width:1000px;margin:60px auto;padding:24px}a{color:#264f3c}small{letter-spacing:.14em;text-transform:uppercase;color:#62756a}h1{font-size:42px;letter-spacing:-.04em}p{color:#65736b;line-height:1.6}form{background:#fff;padding:28px;border:1px solid #dde3dc;border-radius:16px;margin:28px 0}label{display:block;font-weight:600;margin-bottom:10px}input{display:block;width:100%;font:inherit;padding:12px;border:1px solid #bac7bd;border-radius:8px;margin:0 0 24px}button{border:0;border-radius:8px;padding:12px 18px;background:#264f3c;color:#fff;font:inherit;cursor:pointer}button:disabled{opacity:.5;cursor:wait}:focus-visible{outline:3px solid #b38b44;outline-offset:3px}#status{min-height:24px}li{padding:12px 0;border-bottom:1px solid #dde3dc}ul{list-style:none;padding:0}
+.table-wrap{overflow-x:auto;background:white;border:1px solid #dde3dc;border-radius:12px}table{width:100%;border-collapse:collapse;text-align:left}th,td{padding:16px;border-bottom:1px solid #dde3dc}th{background:#ecf0eb;font-size:14px}td input[type=text]{min-width:200px;margin:0}td input[type=checkbox]{width:20px;height:20px;margin:0;accent-color:#264f3c}td button{padding:9px 12px}.actions{display:flex;gap:8px}.delete{background:#f9e8e3;color:#983c2c}caption{text-align:left;padding:16px;color:#65736b}
+</style>
+<main>
+<small>Listening room · Teacher</small>
+<h1>Add an audio</h1>
+<p>Upload a lesson for your listeners. It will appear in the listening room immediately.</p>
+<form id="upload">
+<label for="file">Audio file</label>
+<input id="file" type="file" accept=".mp3,.wav,.ogg,.m4a,.aac,.flac,.webm" required aria-describedby="formats">
+<p id="formats">MP3, WAV, OGG, M4A, AAC, FLAC or WebM. Maximum 100 MB.</p>
+<label for="name">Display name (optional)</label>
+<input id="name" type="text" maxlength="200" placeholder="Uses the filename if left blank">
+<button id="submit" type="submit">Upload audio</button>
+<p id="status" role="status" aria-live="polite"></p>
+</form>
+<a href="/listening">Open listening room →</a>
+<h2>Audio library</h2>
+<p>Choose what listeners can see. Allow replay enables unlimited listening and seeking to any position. Refresh the listening page to see changes.</p>
+<p id="library-status" role="status" aria-live="polite"></p>
+<div class="table-wrap"><table><caption>Manage your uploaded audio</caption><thead><tr><th scope="col">Name</th><th scope="col">Visible</th><th scope="col">Full access</th><th scope="col">Actions</th></tr></thead><tbody id="library"><tr><td colspan="4">Loading…</td></tr></tbody></table></div>
+</main>
+<script>
+const form = document.querySelector('#upload');
+const status = document.querySelector('#status');
+const submit = document.querySelector('#submit');
+async function refresh() {
+  const response = await fetch('/api/teacher/audio');
+  if (!response.ok) throw new Error('Could not load library.');
+  const items = await response.json();
+  const library = document.querySelector('#library');
+  library.replaceChildren();
+  const message = document.querySelector('#library-status');
+  message.textContent = items.length ? '' : 'No audio uploaded yet.';
+  for (const item of items) {
+    const row = document.createElement('tr');
+    row.innerHTML = '<td><input class="audio-name" type="text" maxlength="200" required></td><td><input class="visible" type="checkbox"></td><td><input class="replay" type="checkbox"></td><td><div class="actions"><button class="save" type="button">Save name</button><button class="delete" type="button">Delete</button></div></td>';
+    const name = row.querySelector('.audio-name');
+    const visible = row.querySelector('.visible');
+    const replay = row.querySelector('.replay');
+    name.value = item.name;
+    name.setAttribute('aria-label', `Name for ${item.name}`);
+    visible.checked = item.visible;
+    replay.checked = item.allow_replay;
+    visible.setAttribute('aria-label', `Show ${item.name} in listening room`);
+    replay.setAttribute('aria-label', `Allow unlimited replay and seeking for ${item.name}`);
+    const busy = value => row.querySelectorAll('input,button').forEach(control => { control.disabled = value; });
+    const request = async (action, data) => {
+      const response = await fetch(`/api/teacher/${action}`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id: item.id, ...data})});
+      if (!response.ok) throw new Error(response.status === 401 ? 'Session expired. Refresh this page and sign in again.' : response.status === 404 ? 'Audio or action not found. Refresh the page; restart the server if this continues.' : `Could not ${action} audio (error ${response.status}). Try again.`);
+    };
+    const saveSettings = async () => {
+      busy(true);
+      try {
+        await request('settings', {visible: visible.checked, allow_replay: replay.checked});
+        item.visible = visible.checked;
+        item.allow_replay = replay.checked;
+        message.textContent = `Settings saved for “${item.name}”.`;
+      } catch (error) { visible.checked = item.visible; replay.checked = item.allow_replay; message.textContent = error.message; }
+      finally { busy(false); }
+    };
+    visible.onchange = replay.onchange = saveSettings;
+    row.querySelector('.save').onclick = async () => {
+      if (!name.value.trim()) { name.setCustomValidity('Enter an audio name.'); name.reportValidity(); return; }
+      name.setCustomValidity('');
+      busy(true);
+      try {
+        await request('rename', {name: name.value.trim()});
+        item.name = name.value.trim();
+        name.value = item.name;
+        message.textContent = `Name saved: “${item.name}”.`;
+      } catch (error) { message.textContent = error.message; }
+      finally { busy(false); }
+    };
+    name.oninput = () => name.setCustomValidity('');
+    row.querySelector('.delete').onclick = async () => {
+      busy(true);
+      try {
+        await request('delete', {});
+        row.remove();
+        message.textContent = `“${item.name}” deleted.`;
+      } catch (error) { message.textContent = error.message; busy(false); }
+    };
+    library.append(row);
+  }
+}
+form.addEventListener('submit', async event => {
+  event.preventDefault();
+  const file = document.querySelector('#file').files[0];
+  if (!file || !file.size || file.size > 100 * 1024 * 1024) {
+    status.textContent = 'Choose a non-empty audio file up to 100 MB.';
+    return;
+  }
+  submit.disabled = true;
+  status.textContent = 'Uploading…';
+  try {
+    const query = new URLSearchParams({filename: file.name, name: document.querySelector('#name').value.trim()});
+    const response = await fetch(`/api/teacher/upload?${query}`, {method: 'POST', body: file});
+    if (!response.ok) throw new Error(response.status === 401 ? 'Sign in again to upload.' : 'Upload failed. Check the file format and try again.');
+    const result = await response.json();
+    form.reset();
+    status.textContent = `“${result.name}” uploaded. Available in the listening room.`;
+    try { await refresh(); } catch { status.textContent += ' Refresh to update the library.'; }
+  } catch (error) { status.textContent = error.message; }
+  finally { submit.disabled = false; }
+});
+refresh().catch(() => { document.querySelector('#library').replaceChildren(); document.querySelector('#library-status').textContent = 'Could not load library. Refresh to try again.'; });
+</script>
+</html>
