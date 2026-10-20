@@ -2,11 +2,13 @@
 import argparse
 import hmac
 import json
+import math
 import mimetypes
 import os
 import sqlite3
 import secrets
 import time
+import threading
 import uuid
 from http.cookies import SimpleCookie, CookieError
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -291,9 +293,28 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--host', default='0.0.0.0', help='Bind address (default: all network interfaces)')
     parser.add_argument('--port', type=int, default=8000)
+    parser.add_argument('--duration', type=float, default=120, help='Automatically stop after this many minutes (default: 120; 0 disables)')
     args = parser.parse_args()
+    if args.duration < 0 or not math.isfinite(args.duration):
+        parser.error('--duration must be a finite, non-negative number of minutes')
     sync_audio()
     server = ThreadingHTTPServer((args.host, args.port), Handler)
     print(f'Listening on {args.host}:{server.server_port}', flush=True)
     print(f'Local URL: http://localhost:{server.server_port}/listening', flush=True)
-    server.serve_forever()
+    timer = None
+    if args.duration:
+        def stop_session():
+            print('Teaching session ended. Shutting down the server.', flush=True)
+            server.shutdown()
+        timer = threading.Timer(args.duration * 60, stop_session)
+        timer.daemon = True
+        timer.start()
+        print(f'Automatic shutdown in {args.duration:g} minutes.', flush=True)
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        if timer:
+            timer.cancel()
+        server.server_close()
